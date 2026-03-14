@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "bootstrap": "node scripts/bootstrap.js",
     "ci:api": "npm run validate --prefix api",
     "ci:web": "npm run validate --prefix web",
     "ci:simulate": "npm run ci:api && npm run ci:web",
