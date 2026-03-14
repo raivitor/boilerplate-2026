@@ -1,2 +1,2 @@
 # boilerplate-2026
-Boilerplate de next + express
+Projeto que servirá de base para futuros projetos no ano de 2026
