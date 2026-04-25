@@ -19,9 +19,9 @@
     "check": "npm run format:check && npm run lint && npm run typecheck"
   },
   "dependencies": {
-    "next": "16.1.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "next": "16.2.4",
+    "react": "19.2.5",
+    "react-dom": "19.2.5"
   },
   "devDependencies": {
     "@types/node": "^24.12.0",
@@ -29,9 +29,9 @@
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "16.2.4",
     "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.8.1",
-    "typescript": "^5"
+    "prettier": "^3.8.3",
+    "typescript": "^6.0.3"
   }
 }

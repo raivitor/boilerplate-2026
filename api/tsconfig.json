@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2024",
-    "lib": ["ES2024"],
+    "target": "ES2025",
+    "lib": ["ES2025"],
+    "types": ["node"],
+    "noUncheckedSideEffectImports": true,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "rootDir": "./src",

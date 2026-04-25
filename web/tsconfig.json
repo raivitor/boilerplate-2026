@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2024",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "target": "ES2025",
+    "lib": ["dom", "ES2025"],
+    "types": ["node"],
+    "noUncheckedSideEffectImports": true,
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
