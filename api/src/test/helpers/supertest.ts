@@ -5,13 +5,3 @@ export function getResponseBody<T>(response: Response): T {
 
   return body as T
 }
-
-export function getSetCookieHeaders(response: Response): string[] {
-  const setCookieHeader = response.headers['set-cookie']
-
-  if (!setCookieHeader) {
-    return []
-  }
-
-  return Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader]
-}

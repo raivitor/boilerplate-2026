@@ -1,32 +1,24 @@
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
+import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { Pool } from 'pg'
 
-async function reset() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL is not defined')
-  }
+import { assertSafeReset } from '../config/environment.js'
 
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-  })
-
-  const db = drizzle(pool)
-
-  console.warn('Resetting database schema...')
-
-  await db.execute(sql`DROP SCHEMA public CASCADE;`)
-  await db.execute(sql`CREATE SCHEMA public;`)
-  await db.execute(sql`GRANT ALL ON SCHEMA public TO public;`)
-
-  console.warn('Database schema reset complete.')
-
-  await pool.end()
-}
-
+const confirmation = process.argv
+  .find(arg => arg.startsWith('--confirm='))
+  ?.slice('--confirm='.length)
+const connectionString = assertSafeReset(process.env, confirmation)
+const pool = new Pool({ connectionString, connectionTimeoutMillis: 5000 })
 try {
-  await reset()
-} catch (error) {
-  console.error(error)
-  throw error
+  const db = drizzle(pool)
+  await db.transaction(async tx => {
+    await tx.execute(sql`DROP SCHEMA IF EXISTS public CASCADE`)
+    await tx.execute(sql`DROP SCHEMA IF EXISTS drizzle CASCADE`)
+    await tx.execute(sql`CREATE SCHEMA public`)
+  })
+  await migrate(db, { migrationsFolder: './drizzle' })
+  console.warn('Database reset and migrations complete.')
+} finally {
+  await pool.end()
 }

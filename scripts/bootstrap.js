@@ -5,20 +5,6 @@ const path = require('node:path')
 
 const ROOT_DIR = path.resolve(__dirname, '..')
 
-const IGNORED_NPM_CONFIG_FLAGS = new Set([
-  'audit',
-  'bin_links',
-  'fund',
-  'foreground_scripts',
-  'global',
-  'ignore_scripts',
-  'include_workspace_root',
-  'package_lock',
-  'save_exact',
-  'workspaces',
-  'yes',
-])
-
 const parseCliArgs = argv => {
   const positionals = []
   let projectName = null
@@ -37,51 +23,25 @@ const parseCliArgs = argv => {
     }
 
     if (arg.startsWith('--name=')) {
+      if (projectName !== null) throw new Error('Informe apenas um nome de projeto.')
       projectName = arg.slice('--name='.length)
       continue
     }
 
-    if (arg.startsWith('--project=')) {
-      projectName = arg.slice('--project='.length)
-      continue
-    }
-
-    if (arg.startsWith('--') && !projectName) {
-      projectName = arg.slice(2)
-      continue
-    }
+    if (arg.startsWith('-')) throw new Error(`Opcao desconhecida: ${arg}`)
 
     positionals.push(arg)
   }
 
-  if (!projectName && positionals.length > 0) {
+  if (projectName !== null && positionals.length > 0) {
+    throw new Error('Use o nome posicional ou --name, sem combinar os dois.')
+  }
+
+  if (projectName === null && positionals.length > 0) {
     projectName = positionals.join(' ')
   }
 
-  if (!projectName) {
-    projectName = discoverProjectNameFromNpmConfig()
-  }
-
   return { dryRun, help, projectName }
-}
-
-const discoverProjectNameFromNpmConfig = () => {
-  const candidates = Object.entries(process.env)
-    .filter(([key, value]) => key.startsWith('npm_config_') && value === 'true')
-    .map(([key]) => key.slice('npm_config_'.length))
-    .filter(key => !IGNORED_NPM_CONFIG_FLAGS.has(key))
-
-  if (candidates.length === 1) {
-    return candidates[0].replaceAll('_', '-')
-  }
-
-  if (candidates.length > 1) {
-    throw new Error(
-      `Nao foi possivel deduzir o nome do projeto a partir dos argumentos: ${candidates.join(', ')}`,
-    )
-  }
-
-  return null
 }
 
 const slugifyProjectName = value =>
@@ -126,85 +86,10 @@ const writeFileIfChanged = (filePath, nextContent, updates, dryRun, baseDir = RO
   }
 }
 
-const renderRootReadme = ({ displayName }) => `# ${displayName}
-
-Aplicacao baseada no \`boilerplate-2026\`, com \`web\` em \`Next.js 16 + React 19\` e \`api\` em \`Express + TypeScript + Drizzle + Postgres\`.
-
-## Requisitos
-
-- Node 24
-- npm 11+
-
-## Setup inicial
-
-\`\`\`bash
-cp api/.env.example api/.env
-nvm use
-npm ci --prefix api
-npm ci --prefix web
-\`\`\`
-
-Se for usar Postgres local via Docker:
-
-\`\`\`bash
-docker compose -f api/docker-compose.yml up -d
-npm run db:migrate --prefix api
-\`\`\`
-
-## Desenvolvimento
-
-\`\`\`bash
-npm run dev --prefix api
-npm run dev --prefix web
-\`\`\`
-
-## Qualidade
-
-\`\`\`bash
-npm run ci:simulate
-npm run format:all
-\`\`\`
-`
-
-const renderApiReadme = ({ displayName }) => `# ${displayName} API
-
-API em \`Express + TypeScript + Drizzle + Postgres\`, com:
-
-- healthcheck em \`/healthcheck\` e \`/api/healthcheck\`
-- CRUD de exemplo em \`/api/items\`
-- validacao com \`zod\`
-- testes unitarios e de integracao com \`node:test\` e \`supertest\`
-
-## Scripts
-
-- \`npm run dev\`: sobe a API em modo watch
-- \`npm run build\`: compila para \`dist\`
-- \`npm test\`: executa testes unitarios
-- \`npm run test:integration\`: executa integracoes HTTP com banco real
-- \`npm run test:all\`: executa unitarios + integracao
-- \`npm run validate\`: roda lint, typecheck e testes unitarios
-
-## Banco de dados
-
-1. Copie \`api/.env.example\` para \`api/.env\`.
-2. Configure \`DATABASE_URL\`.
-3. Configure \`TEST_DATABASE_URL\` apontando para um banco de testes dedicado.
-4. Rode \`npm run db:migrate\`.
-
-Para desenvolvimento local, o \`docker-compose.yml\` sobe um Postgres simples para a \`DATABASE_URL\`.
-`
-
-const renderWebReadme = ({ displayName }) => `# ${displayName} Web
-
-Frontend em \`Next.js 16 + React 19\`.
-
-## Scripts
-
-- \`npm run dev\`: sobe o frontend em modo desenvolvimento
-- \`npm run build\`: gera o build de producao
-- \`npm run start\`: sobe o build gerado
-- \`npm run validate\`: roda lint, typecheck e testes
-`
+const renderReadme = (rootDir, relativePath, title) => {
+  const content = fs.readFileSync(path.join(rootDir, relativePath), 'utf8')
+  return content.replace(/^# .+$/m, `# ${title}`)
+}
 
 const bootstrapProject = ({ rawProjectName, rootDir = ROOT_DIR, dryRun = false }) => {
   const projectSlug = slugifyProjectName(rawProjectName)
@@ -253,28 +138,32 @@ const bootstrapProject = ({ rawProjectName, rootDir = ROOT_DIR, dryRun = false }
     rootDir,
   )
 
-  updateTextFile(
-    path.join(rootDir, 'api', 'package-lock.json'),
-    content => content.replaceAll('"name": "boilerplate-api"', `"name": "${apiPackageName}"`),
-    updates,
-    dryRun,
-    rootDir,
-  )
-
-  updateTextFile(
-    path.join(rootDir, 'web', 'package-lock.json'),
-    content => content.replaceAll('"name": "web"', `"name": "${webPackageName}"`),
-    updates,
-    dryRun,
-    rootDir,
-  )
+  for (const [directory, name] of [
+    ['api', apiPackageName],
+    ['web', webPackageName],
+  ]) {
+    updateJsonFile(
+      path.join(rootDir, directory, 'package-lock.json'),
+      lock => {
+        lock.name = name
+        lock.packages[''].name = name
+        return lock
+      },
+      updates,
+      dryRun,
+      rootDir,
+    )
+  }
 
   updateTextFile(
     path.join(rootDir, 'api', '.env.example'),
     content =>
       content
         .replace(/^POSTGRES_DB=.*$/m, `POSTGRES_DB=${databaseName}`)
-        .replace(/^DATABASE_URL=.*$/m, `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/${databaseName}`)
+        .replace(
+          /^DATABASE_URL=.*$/m,
+          `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/${databaseName}`,
+        )
         .replace(
           /^TEST_DATABASE_URL=.*$/m,
           `TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/${databaseName}_test`,
@@ -294,7 +183,7 @@ const bootstrapProject = ({ rawProjectName, rootDir = ROOT_DIR, dryRun = false }
 
   writeFileIfChanged(
     path.join(rootDir, 'README.md'),
-    renderRootReadme({ displayName }),
+    renderReadme(rootDir, 'README.md', displayName),
     updates,
     dryRun,
     rootDir,
@@ -302,7 +191,7 @@ const bootstrapProject = ({ rawProjectName, rootDir = ROOT_DIR, dryRun = false }
 
   writeFileIfChanged(
     path.join(rootDir, 'api', 'README.md'),
-    renderApiReadme({ displayName }),
+    renderReadme(rootDir, 'api/README.md', `${displayName} API`),
     updates,
     dryRun,
     rootDir,
@@ -310,7 +199,7 @@ const bootstrapProject = ({ rawProjectName, rootDir = ROOT_DIR, dryRun = false }
 
   writeFileIfChanged(
     path.join(rootDir, 'web', 'README.md'),
-    renderWebReadme({ displayName }),
+    renderReadme(rootDir, 'web/README.md', `${displayName} Web`),
     updates,
     dryRun,
     rootDir,
@@ -331,7 +220,6 @@ const printUsage = () => {
 
   npm run bootstrap -- meu-projeto
   npm run bootstrap -- --name=meu-projeto
-  npm run bootstrap --meu-projeto
 
 Opcoes:
 
@@ -358,7 +246,9 @@ const main = () => {
     const result = bootstrapProject({ rawProjectName: projectName, dryRun })
 
     if (result.updates.length === 0) {
-      console.log(`Nenhuma alteracao necessaria. Projeto ja esta configurado como "${result.projectSlug}".`)
+      console.log(
+        `Nenhuma alteracao necessaria. Projeto ja esta configurado como "${result.projectSlug}".`,
+      )
       return
     }
 
@@ -390,7 +280,6 @@ if (require.main === module) {
 
 module.exports = {
   bootstrapProject,
-  discoverProjectNameFromNpmConfig,
   parseCliArgs,
   slugifyProjectName,
 }

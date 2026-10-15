@@ -2,14 +2,16 @@
   "name": "boilerplate-2026",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
     "bootstrap": "node scripts/bootstrap.js",
     "ci:api": "npm run validate --prefix api",
     "ci:web": "npm run validate --prefix web",
-    "ci:simulate": "npm run ci:api && npm run ci:web",
+    "ci:simulate": "npm run test:bootstrap && npm run ci:api && npm run ci:web",
     "format:api": "npm run format:fix --prefix api",
     "format:web": "npm run format:fix --prefix web",
-    "format:all": "npm run format:api && npm run format:web"
-  }
+    "format:all": "npm run format:api && npm run format:web",
+    "test:bootstrap": "node --test scripts/bootstrap.test.js",
+    "validate:full": "npm run ci:simulate && npm run test:integration --prefix api && npm run build --prefix api && npm run build --prefix web"
+  },
+  "private": true
 }

@@ -1,13 +1,8 @@
 import assert from 'node:assert/strict'
-import { before, beforeEach, test } from 'node:test'
+import { before, test } from 'node:test'
 
 import { getResponseBody } from '../test/helpers/supertest.js'
-import {
-  api,
-  integrationDescribe,
-  prepareIntegrationSuite,
-  resetDatabase,
-} from '../test/setup/integration.js'
+import { api, integrationDescribe, prepareIntegrationSuite } from '../test/setup/integration.js'
 
 type HealthcheckBody = {
   status: string
@@ -18,10 +13,6 @@ type HealthcheckBody = {
 integrationDescribe('Route integration: healthcheck', () => {
   before(async () => {
     await prepareIntegrationSuite()
-  })
-
-  beforeEach(async () => {
-    await resetDatabase()
   })
 
   test('GET /healthcheck returns database connectivity status', async () => {

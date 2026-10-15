@@ -30,7 +30,21 @@ app.get(['/healthcheck', '/api/healthcheck'], async (_req: Request, res: Respons
   }
 })
 
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({ error: 'Not Found' })
+})
+
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  if (res.headersSent) return _next(err)
+  const type = err && typeof err === 'object' && 'type' in err ? err.type : undefined
+  if (type === 'entity.parse.failed') {
+    res.status(400).json({ error: 'Invalid JSON' })
+    return
+  }
+  if (type === 'entity.too.large') {
+    res.status(413).json({ error: 'Payload Too Large' })
+    return
+  }
   console.error('Unhandled error:', err)
   res.status(500).json({ error: 'Internal Server Error' })
 })
